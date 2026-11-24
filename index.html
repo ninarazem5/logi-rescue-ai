@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LOGI-RESCUE AI | Krizni manager v logistiki</title>
+<style>
+:root{--navy:#102a43;--blue:#1769aa;--pale:#eef5fb;--ink:#243b53;--muted:#627d98;--line:#d9e4ee}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f3f7fb;color:var(--ink)}
+header{background:linear-gradient(120deg,#102a43,#1769aa);color:white;padding:30px 20px}
+.head{max-width:1050px;margin:auto}h1{margin:0 0 8px;font-size:28px;letter-spacing:.4px}.sub{opacity:.9;margin:0}
+main{max-width:1050px;margin:26px auto;padding:0 18px 50px}
+.panel{background:white;border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:18px;box-shadow:0 5px 18px #102a430a}
+h2{font-size:19px;color:var(--navy);margin:0 0 18px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+label{display:block;font-size:14px;font-weight:700;margin:0 0 7px}
+input,select,textarea{width:100%;padding:12px;border:1px solid #c7d5e2;border-radius:8px;font:inherit;color:var(--ink);background:white}
+textarea{min-height:110px;resize:vertical}.wide{grid-column:1/-1}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+button{border:0;border-radius:8px;padding:12px 18px;font-weight:700;cursor:pointer}
+.primary{background:var(--blue);color:white}.secondary{background:var(--pale);color:var(--navy);border:1px solid var(--line)}
+button:disabled{opacity:.55;cursor:wait}
+#status{font-size:14px;color:var(--muted);margin-top:12px;white-space:pre-wrap}
+#result{display:none}.resultText{white-space:pre-wrap;line-height:1.58;font-size:15px;overflow-wrap:anywhere}
+.note{background:#fff8e8;border-left:4px solid #e0a52b;padding:12px 14px;border-radius:6px;font-size:13px;line-height:1.5;color:#684d13}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:0 15px 25px}
+@media(max-width:650px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}h1{font-size:23px}.panel{padding:17px}}
+</style>
+</head>
+<body>
+<header><div class="head">
+<h1>LOGI-RESCUE AI</h1>
+<p class="sub">Pametni krizni manager v logistiki</p>
+</div></header>
+<main>
+<section class="panel">
+<h2>1. Vnos kriznega dogodka</h2>
+<div class="grid">
+<div><label for="type">Vrsta dogodka</label>
+<select id="type">
+<option value="">Izberi vrsto dogodka</option>
+<option>Okvara transportnega vozila</option>
+<option>Zamuda pošiljke</option>
+<option>Poplava ali požar v skladišču</option>
+<option>Okvara hladilnega sistema</option>
+<option>Motnja v dobavni verigi</option>
+<option>Drugo</option>
+</select></div>
+<div><label for="location">Lokacija dogodka</label><input id="location" placeholder="Npr. skladišče Ljubljana"></div>
+<div class="wide"><label for="description">Opis dogodka</label><textarea id="description" placeholder="Opiši, kaj se je zgodilo, kdaj in kakšne težave so nastale."></textarea></div>
+<div><label for="goods">Prizadeto blago / pošiljka</label><input id="goods" placeholder="Npr. elektronske naprave, 12 palet"></div>
+<div><label for="impact">Znani vpliv na poslovanje</label><input id="impact" placeholder="Npr. zamuda 6 ur, dodatni stroški niso znani"></div>
+</div>
+<div class="actions">
+<button class="primary" id="analyze">Analiziraj dogodek z AI</button>
+<button class="secondary" id="example" type="button">Naloži testni primer</button>
+<button class="secondary" id="reset" type="button">Počisti</button>
+</div>
+<div id="status" role="status"></div>
+</section>
+
+<section class="panel note">
+<strong>Opozorilo:</strong> To je študijski prototip za podporo odločanju. Predlogi umetne inteligence niso nadomestilo za strokovno presojo, varnostne postopke ali navodila pristojnih služb. Model ne sme ugibati manjkajočih podatkov.
+</section>
+
+<section class="panel" id="result">
+<h2>2. Analiza kriznega dogodka</h2>
+<div class="resultText" id="resultText"></div>
+<div class="actions">
+<button class="secondary" id="copy" type="button">Kopiraj poročilo</button>
+<button class="secondary" id="print" type="button">Natisni / shrani kot PDF</button>
+</div>
+</section>
+</main>
+<footer>LOGI-RESCUE AI · Izobraževalni prototip z modelom Google Gemini</footer>
+<script>
+const $ = id => document.getElementById(id);
+$('example').addEventListener('click',()=>{
+ $('type').value='Poplava ali požar v skladišču';
+ $('location').value='Skladišče Ljubljana';
+ $('description').value='V skladišču je počila vodovodna cev. Voda je zalila del skladiščnega prostora. Zaposleni so opazili mokro embalažo na delu palet. Obseg poškodovanega blaga še ni znan.';
+ $('goods').value='Elektronske naprave na 8 paletah; dejansko stanje blaga še ni pregledano.';
+ $('impact').value='Odprema naročil iz prizadetega dela skladišča je začasno ustavljena. Višina škode in trajanje prekinitve nista znana.';
+});
+$('reset').addEventListener('click',()=>{
+ ['type','location','description','goods','impact'].forEach(id=>$(id).value='');
+ $('result').style.display='none';$('status').textContent='';
+});
+$('analyze').addEventListener('click',async()=>{
+ const payload={type:$('type').value,location:$('location').value.trim(),description:$('description').value.trim(),goods:$('goods').value.trim(),impact:$('impact').value.trim()};
+ if(!payload.type||!payload.description){$('status').textContent='Izpolni vsaj vrsto dogodka in opis dogodka.';return;}
+ const btn=$('analyze');btn.disabled=true;$('status').textContent='Gemini AI pripravlja analizo. Počakaj nekaj trenutkov…';$('result').style.display='none';
+ try{
+  const response=await fetch('/.netlify/functions/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const data=await response.json();
+  if(!response.ok)throw new Error(data.error||'Prišlo je do napake pri povezavi z AI-modelom.');
+  $('resultText').textContent=data.analysis;
+  $('result').style.display='block';$('status').textContent='Analiza je pripravljena.';
+  $('result').scrollIntoView({behavior:'smooth',block:'start'});
+ }catch(err){$('status').textContent='Napaka: '+err.message+'\nPreveri nastavitev GEMINI_API_KEY v Netlify.';}
+ finally{btn.disabled=false;}
+});
+$('copy').addEventListener('click',async()=>{await navigator.clipboard.writeText($('resultText').textContent);$('status').textContent='Poročilo je kopirano.';});
+$('print').addEventListener('click',()=>window.print());
+</script>
+</body>
+</html>
